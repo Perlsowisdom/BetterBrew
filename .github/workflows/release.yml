@@ -1,0 +1,52 @@
+name: GitHub release with .pbw
+
+# Runs when you push a version tag such as v1.0.1, or manually from the Actions tab.
+# The tag must match "version" in package.json. Creates a GitHub Release and attaches
+# the built .pbw. This does not publish to the Pebble store (see publish.yml).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, for example v1.0.1 (created from main if it does not exist)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install Pebble tool and SDK
+        run: |
+          uv tool install pebble-tool --python 3.13
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/pebble" sdk install latest
+      - name: Work out tag and check it matches package.json
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION=$(jq -r .version package.json)
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "Tag $TAG does not match package.json version $VERSION"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - run: pebble build
+      - name: Name the build
+        run: cp build/*.pbw "BetterBrew-${{ steps.meta.outputs.version }}.pbw"
+      - name: Create release and attach .pbw
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            "BetterBrew-${{ steps.meta.outputs.version }}.pbw" \
+            --target "${{ github.sha }}" \
+            --title "BetterBrew ${{ steps.meta.outputs.version }}" \
+            --generate-notes
