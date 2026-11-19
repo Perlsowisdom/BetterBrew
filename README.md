@@ -1,6 +1,16 @@
-# BetterBrew
+<p align="center">
+  <img src="docs/banner.png" alt="BetterBrew: coffee, tea and matcha timers" width="720">
+</p>
 
 A simple, no-frills brew timer for the Pebble Time (basalt), written in C with the Pebble SDK.
+
+<p align="center">
+  <img src="docs/menu.png" alt="Drink menu" width="144">
+  <img src="docs/setup.png" alt="Pour-over setup" width="144">
+  <img src="docs/bloom.png" alt="Bloom countdown" width="144">
+  <img src="docs/brew.png" alt="Brew countdown" width="144">
+  <img src="docs/tea.png" alt="Black tea setup" width="144">
+</p>
 
 ## Drinks
 
@@ -30,14 +40,13 @@ pebble install --emulator basalt
 pebble install --phone <phone-ip>    # watch via the Pebble app's Developer Connection
 ```
 
-## Publishing
-
-`.github/workflows/publish.yml` uploads a release to the Pebble app store when run manually from GitHub Actions. It needs the app to exist in the store already and a repository variable named `PEBBLE_APP_ID`. Bump `version` in `package.json` before each run.
+Each [release](https://github.com/Perlsowisdom/BetterBrew/releases) has a ready-to-install `.pbw` file attached.
 
 ## Project layout
 
 ```
-src/c/BetterBrew.c           app source
+src/c/BetterBrew.c               app source
 resources/images/menu_icon.png   launcher icon
-package.json                 project metadata
+package.json                     project metadata
+docs/                            README images
 ```
