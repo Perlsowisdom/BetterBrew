@@ -1,0 +1,8 @@
+build/
+.lock-waf*
+node_modules/
+
+# Local test captures and store listing assets (not part of the app source)
+shots/
+screenshots/
+store/

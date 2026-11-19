@@ -1,0 +1,51 @@
+name: Publish to Pebble app store
+
+# Manual trigger only. Each run publishes the version in package.json, and the
+# store rejects a version that has already been used, so bump "version" first.
+on:
+  workflow_dispatch:
+
+jobs:
+  # Build in a job without id-token, so build dependencies can never mint a store token.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install Pebble tool and SDK
+        run: |
+          uv tool install pebble-tool --python 3.13
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/pebble" sdk install latest
+      - run: pebble build
+      - name: Read version
+        id: meta
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+      - run: cp build/*.pbw app.pbw
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pbw
+          path: app.pbw
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pbw
+      - name: Upload release to the Pebble app store
+        env:
+          APP_ID: ${{ vars.PEBBLE_APP_ID }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          test -n "$APP_ID" || { echo "Set the PEBBLE_APP_ID repository variable first"; exit 1; }
+          TOKEN=$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://appstore-api.repebble.com" | jq -r .value)
+          curl -fsS -H "Authorization: Bearer $TOKEN" \
+            --form-string version="$VERSION" -F "pbwFile=@app.pbw" --form-string isPublished=true \
+            "https://appstore-api.repebble.com/api/dashboard/apps/$APP_ID/releases"
